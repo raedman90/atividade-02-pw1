@@ -15,7 +15,7 @@ declare global {
   }
 }
 
-async function checkExistsUserAccount(req: Request, res: Response, next: NextFunction) {
+export async function checkExistsUserAccount(req: Request, res: Response, next: NextFunction) {
   const { username } = req.headers;
 
   if (!username) {
@@ -51,6 +51,43 @@ app.get('/technologies', checkExistsUserAccount, async (req: Request, res: Respo
       res.json(technologies);
     } catch (error) {
       res.status(500).json({ error: 'Erro ao buscar tecnologias.' });
+    }
+  });
+  
+  app.put('/technologies/:id', checkExistsUserAccount, async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { title, deadline } = req.body;
+    const user = req.user;
+  
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não existe.' });
+    }
+  
+    try {
+      const technology = await prisma.technology.findFirst({
+        where: {
+          id: id,
+          userId: user.id, // Garante que a tecnologia pertence ao usuário
+        },
+      });
+  
+      if (!technology) {
+        return res.status(404).json({ error: 'Tecnologia não encontrada.' });
+      }
+  
+      const updatedTechnology = await prisma.technology.update({
+        where: {
+          id: id,
+        },
+        data: {
+          title: title,
+          deadline: deadline ? new Date(deadline) : null,
+        },
+      });
+  
+      res.json(updatedTechnology);
+    } catch (error) {
+      res.status(500).json({ error: 'Erro ao atualizar tecnologia.' });
     }
   });
   
